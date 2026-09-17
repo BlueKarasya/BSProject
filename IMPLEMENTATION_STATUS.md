@@ -10,15 +10,17 @@
 - 회의록 편집·확정, 제안서 생성·수정 시 승인 무효화, Markdown 다운로드
 - OpenAI 구조화 출력과 전사 구간 출처 검증 코드
 - Supabase 초기 스키마·조직별 RLS·비공개 Storage 정책·작업 임대 함수
+- Supabase `BSProject` 운영 프로젝트에 8개 테이블·22개 RLS/Storage 정책 적용 및 확인
+- Vercel/로컬 환경에서 Supabase Auth API 도달 여부를 확인하는 상태 검사
 - 실제 브라우저에서 클로바노트 TXT 등록 → 3개 발화 구간 파싱 → 회의록 생성·확정 → 제안서 생성 흐름 검증
 - Next.js 운영 빌드와 API Route 포함 전체 TypeScript 검사
 
 ## 코드가 준비됐지만 외부 환경에서 미검증
 
-- Supabase migration과 SQL 접근 시험
+- Supabase SQL 교차 조직 접근 시험
 - 로그인 토큰과 RLS를 사용하는 GPT 회의록 분석 Route Handler
 
-계정·프로젝트가 없기 때문에 실제 DB 적용, OpenAI 호출, Vercel 배포를 실행하지 않았습니다.
+Supabase 스키마와 Vercel 배포는 연결했습니다. 사용자 로그인·조직 생성 전이므로 실제 고객 데이터 저장과 OpenAI 호출은 아직 실행하지 않았습니다.
 
 ## 최근 검증 결과
 

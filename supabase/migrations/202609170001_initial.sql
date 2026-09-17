@@ -21,6 +21,7 @@ create table public.meetings (
  customer_id uuid not null, title text not null check(length(trim(title)) between 1 and 300),
  held_at timestamptz not null default now(), participants text not null default '', transcript text not null default '',
  segments jsonb not null default '[]'::jsonb check(jsonb_typeof(segments)='array'), minutes jsonb,
+ audio_name text, text_name text,
  status text not null default 'draft' check(status in ('draft','review','confirmed')),
  version integer not null default 1 check(version>0), created_at timestamptz not null default now(),
  unique(organization_id,id), foreign key(organization_id,customer_id) references public.customers(organization_id,id)
@@ -30,7 +31,16 @@ create table public.proposals (
  title text not null check(length(trim(title)) between 1 and 300), content text not null default '',
  status text not null default 'draft' check(status in ('draft','approved')),
  version integer not null default 1 check(version>0), created_at timestamptz not null default now(),
+ source text not null default 'template' check(source in ('template','gpt')),
+ evidence_ids jsonb not null default '[]'::jsonb check(jsonb_typeof(evidence_ids)='array'),
  foreign key(organization_id,meeting_id) references public.meetings(organization_id,id)
+);
+create table public.reference_documents (
+ id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id),
+ name text not null check(length(trim(name)) between 1 and 300 and name ~ '^[^/\\]+$'),
+ category text not null default '', content text not null check(octet_length(content)<=20971520),
+ allow_ai boolean not null default false, created_at timestamptz not null default now(),
+ unique(organization_id,id)
 );
 create table public.assets (
  id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id), meeting_id uuid not null,
@@ -52,6 +62,7 @@ create table public.jobs (
 );
 create index meetings_org_idx on public.meetings(organization_id);
 create index proposals_org_idx on public.proposals(organization_id);
+create index reference_documents_org_idx on public.reference_documents(organization_id);
 create index assets_org_idx on public.assets(organization_id);
 create index jobs_queue_idx on public.jobs(created_at) where status='queued';
 
@@ -67,12 +78,13 @@ alter table public.memberships enable row level security;
 alter table public.customers enable row level security;
 alter table public.meetings enable row level security;
 alter table public.proposals enable row level security;
+alter table public.reference_documents enable row level security;
 alter table public.assets enable row level security;
 alter table public.jobs enable row level security;
-revoke all on public.organizations,public.memberships,public.customers,public.meetings,public.proposals,public.assets,public.jobs from anon,authenticated;
-grant select on public.organizations,public.memberships,public.customers,public.meetings,public.proposals,public.assets,public.jobs to authenticated;
-grant insert,update,delete on public.customers,public.meetings,public.proposals to authenticated;
-grant all on public.organizations,public.memberships,public.customers,public.meetings,public.proposals,public.assets,public.jobs to service_role;
+revoke all on public.organizations,public.memberships,public.customers,public.meetings,public.proposals,public.reference_documents,public.assets,public.jobs from anon,authenticated;
+grant select on public.organizations,public.memberships,public.customers,public.meetings,public.proposals,public.reference_documents,public.assets,public.jobs to authenticated;
+grant insert,update,delete on public.customers,public.meetings,public.proposals,public.reference_documents to authenticated;
+grant all on public.organizations,public.memberships,public.customers,public.meetings,public.proposals,public.reference_documents,public.assets,public.jobs to service_role;
 create policy org_read on public.organizations for select to authenticated using(public.is_org_member(id));
 create policy membership_read on public.memberships for select to authenticated using(public.is_org_member(organization_id));
 create policy customers_read on public.customers for select to authenticated using(public.is_org_member(organization_id));
@@ -87,6 +99,10 @@ create policy proposals_read on public.proposals for select to authenticated usi
 create policy proposals_insert on public.proposals for insert to authenticated with check(public.is_org_member(organization_id) and status='draft' and version=1);
 create policy proposals_update on public.proposals for update to authenticated using(public.is_org_member(organization_id) and status='draft') with check(public.is_org_member(organization_id) and status='draft');
 create policy proposals_delete on public.proposals for delete to authenticated using(public.is_org_member(organization_id) and status='draft');
+create policy reference_documents_read on public.reference_documents for select to authenticated using(public.is_org_member(organization_id));
+create policy reference_documents_insert on public.reference_documents for insert to authenticated with check(public.is_org_member(organization_id));
+create policy reference_documents_update on public.reference_documents for update to authenticated using(public.is_org_member(organization_id)) with check(public.is_org_member(organization_id));
+create policy reference_documents_delete on public.reference_documents for delete to authenticated using(public.is_org_member(organization_id));
 create policy assets_read on public.assets for select to authenticated using(public.is_org_member(organization_id));
 create policy jobs_read on public.jobs for select to authenticated using(public.is_org_member(organization_id));
 

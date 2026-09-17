@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { editProposal, makeExtractiveDraft, parseTranscript, validateIntake } from './domain';
 import { EMPTY_WORKSPACE, SAMPLE_WORKSPACE } from './demo';
-import type { Customer, Intake, Minutes, Proposal, ReferenceDocument, WorkspaceData } from './types';
+import type { ConnectionStatus, Customer, Intake, Minutes, Proposal, ReferenceDocument, WorkspaceData } from './types';
 
 const STORAGE_KEY='meeting-workspace-demo-v1';
 const uid=(prefix:string)=>`${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
@@ -12,10 +12,12 @@ export function useWorkspace(){
   const [hydrated,setHydrated]=useState(false);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
+  const [connection,setConnection]=useState<ConnectionStatus>({supabase:false,supabaseConfigured:false,supabaseReachable:false,openai:false,mode:'demo'});
   useEffect(()=>{try{const raw=localStorage.getItem(STORAGE_KEY);const stored:WorkspaceData=raw?JSON.parse(raw):SAMPLE_WORKSPACE;setData({...stored,meetings:stored.meetings.map(({audioUrl:_discarded,...meeting})=>meeting)});}catch{setData(SAMPLE_WORKSPACE);}setHydrated(true);},[]);
+  useEffect(()=>{fetch('/api/status',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(setConnection).catch(()=>setConnection({supabase:false,supabaseConfigured:false,supabaseReachable:false,openai:false,mode:'demo'}));},[]);
   useEffect(()=>{if(hydrated)localStorage.setItem(STORAGE_KEY,JSON.stringify(data));},[data,hydrated]);
   const run=async<T,>(work:()=>Promise<T>|T)=>{setBusy(true);setError(null);try{return await work();}catch(e){const message=e instanceof Error?e.message:'처리 중 오류가 발생했습니다.';setError(message);throw e;}finally{setBusy(false);}};
-  return {data,hydrated,busy,error,clearError:()=>setError(null),
+  return {data,hydrated,busy,error,connection,clearError:()=>setError(null),
     addCustomer:(input:Omit<Customer,'id'|'createdAt'>)=>run(()=>setData(d=>({...d,customers:[{...input,id:uid('cus'),createdAt:new Date().toISOString()},...d.customers]}))),
     createMeeting:(input:Intake)=>run(async()=>{
       const validation=validateIntake({audio:input.audio,text:input.text});if(validation.length)throw new Error(validation.join(' '));

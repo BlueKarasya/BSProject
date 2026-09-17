@@ -7,5 +7,5 @@ export interface Meeting { id:string; customerId:string; title:string; heldAt:st
 export interface Proposal { id:string; meetingId:string; title:string; content:string; status:'draft'|'approved'; version:number; createdAt:string; source:'sample'|'template'|'gpt'; evidenceIds:string[] }
 export interface ReferenceDocument { id:string;name:string;category:string;content:string;allowAI:boolean;createdAt:string }
 export interface WorkspaceData { customers:Customer[];meetings:Meeting[];proposals:Proposal[];documents:ReferenceDocument[] }
-export interface ConnectionStatus { supabase:boolean;openai:boolean;mode:'demo'|'cloud' }
+export interface ConnectionStatus { supabase:boolean;supabaseConfigured:boolean;supabaseReachable:boolean;openai:boolean;mode:'demo'|'cloud' }
 export interface Intake { customerId:string;title:string;heldAt:string;participants:string;audio:File|null;text:File|null }
